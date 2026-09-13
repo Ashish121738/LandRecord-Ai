@@ -6,7 +6,7 @@ import {
   FileText, Activity, Database, AlertTriangle, CheckCircle2, Search, Download 
 } from 'lucide-react';
 
-// DYNAMIC CONTENT DICTIONARY
+// DYNAMIC CONTENT DICTIONARY (Updated with realistic Hackathon claims)
 const paneContent = {
   default: {
     title: "Digitizing Land Records with High-Fidelity AI.",
@@ -26,7 +26,7 @@ const paneContent = {
   },
   verifier: {
     title: "Human-in-the-Loop Dashboard",
-    desc: "You are the final line of defense. Review flagged records and override low-confidence AI extractions to maintain 100% legal accuracy.",
+    desc: "You are the final line of defense. Review flagged records and override low-confidence AI extractions to support accurate verification through human review.",
     features: [
       { icon: <AlertTriangle className="w-6 h-6 text-yellow-500 mt-1" />, title: "Anomaly Resolution", desc: "Side-by-side comparison of physical docs vs extracted data." },
       { icon: <CheckCircle2 className="w-6 h-6 text-yellow-500 mt-1" />, title: "Secure Commits", desc: "Approve and push verified records to the master database." }
@@ -37,7 +37,7 @@ const paneContent = {
     desc: "Access your digital Khasra and Khatauni securely using your government-linked identity. Transparency at your fingertips.",
     features: [
       { icon: <Search className="w-6 h-6 text-yellow-500 mt-1" />, title: "Instant Search", desc: "Find your registered property using Khasra or owner name." },
-      { icon: <Download className="w-6 h-6 text-yellow-500 mt-1" />, title: "Digital Downloads", desc: "Get legally valid, digitally signed copies instantly." }
+      { icon: <Download className="w-6 h-6 text-yellow-500 mt-1" />, title: "Digital Downloads", desc: "View and download digitized land records." }
     ]
   }
 };
@@ -63,13 +63,17 @@ export default function Login() {
 
   const handleBackToRoles = () => {
     setView('select');
-    setSelectedRole(null); // Resets the left pane to default text
+    setSelectedRole(null); 
   };
 
   const handleLogin = (e) => {
     e.preventDefault();
+    // 1. Set the auth token
     localStorage.setItem('auth_token', 'mock_jwt_token_123');
-    navigate('/dashboard');
+    // 2. Set the User Role for the ProtectedRoute in App.jsx
+    localStorage.setItem('user_role', selectedRole);
+    // 3. Navigate dynamically to the correct dashboard
+    navigate(`/${selectedRole}/dashboard`);
   };
 
   const handleRegister = (e) => {
@@ -80,7 +84,6 @@ export default function Login() {
 
   const springTransition = { type: "spring", stiffness: 80, damping: 20 };
   
-  // Get active text content
   const activeContent = paneContent[selectedRole || 'default'];
 
   return (
@@ -92,7 +95,6 @@ export default function Login() {
         transition={springTransition}
         className="hidden lg:flex lg:w-1/2 bg-[#3E2723] text-white flex-col justify-between p-12 relative overflow-hidden z-10 shadow-2xl"
       >
-        {/* INFINITE ANIMATION BLOBS (GPU Accelerated) */}
         <motion.div 
           animate={{ rotate: 360, scale: [1, 1.2, 1] }}
           transition={{ repeat: Infinity, duration: 25, ease: "linear" }}
@@ -105,7 +107,6 @@ export default function Login() {
         />
 
         <div className="relative z-10">
-          {/* Logo with infinite gentle float */}
           <motion.div 
             animate={{ y: [-5, 5, -5] }}
             transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
@@ -118,7 +119,6 @@ export default function Login() {
             </div>
           </motion.div>
 
-          {/* DYNAMIC TEXT CROSSFADE */}
           <AnimatePresence mode="wait">
             <motion.div
               key={selectedRole || 'default'}
@@ -154,7 +154,7 @@ export default function Login() {
         </div>
       </motion.div>
 
-      {/* FORM PANE (Remains exactly the same dynamically changing forms) */}
+      {/* FORM PANE */}
       <motion.div 
         layout 
         transition={springTransition}

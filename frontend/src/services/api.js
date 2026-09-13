@@ -1,195 +1,103 @@
-import axios from 'axios'; // Keeping for mock endpoints
+// Change this to your actual FastAPI backend URL running on Aayush's machine
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
-const BASE_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
+// =========================================================================
+// 🔴 REAL BACKEND ENDPOINTS (STRICT MODE)
+// If the FastAPI backend is down, these WILL throw an error. No silent fallbacks.
+// =========================================================================
 
-// ==========================================
-// 1. BACKEND DEV'S AUTH & TOKEN LOGIC
-// ==========================================
-export const getAuthToken = () => {
-  return localStorage.getItem("auth_token") || localStorage.getItem("token") || "";
-};
-
-export const setAuthToken = (token) => {
-  localStorage.setItem("auth_token", token);
-  localStorage.setItem("token", token);
-};
-
-export const logoutUser = () => {
-  localStorage.removeItem("auth_token");
-  localStorage.removeItem("token");
-  window.location.href = "/"; // Fixed to route back to your React login
-};
-
-// ==========================================
-// 2. BACKEND DEV'S REAL API FETCH CALLS
-// ==========================================
-export async function uploadDocumentApi(file) {
+export const uploadDocumentApi = async (file) => {
   const formData = new FormData();
-  formData.append("file", file);
+  formData.append('file', file);
 
-  const token = getAuthToken();
-  const res = await fetch(`${BASE_URL}/upload/`, {
-    method: "POST",
-    headers: {
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    body: formData,
-  });
-
-  if (!res.ok) {
-    const errorData = await res.json().catch(() => ({}));
-    throw new Error(errorData.detail || "File upload failed");
+  try {
+    const response = await fetch(`${API_BASE_URL}/upload`, {
+      method: 'POST',
+      body: formData,
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Backend Error: ${response.status} - ${response.statusText}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error("🚨 UPLOAD FAILED:", error.message);
+    throw error; // Let the React component catch this and show a UI error
   }
-  return await res.json();
-}
+};
 
-export async function extractDocumentApi(documentId) {
-  const token = getAuthToken();
-  const res = await fetch(`${BASE_URL}/upload/${documentId}/extract`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-  });
-
-  if (!res.ok) {
-    const errorData = await res.json().catch(() => ({}));
-    throw new Error(errorData.detail || "AI Extraction failed");
+export const extractDocumentApi = async (documentId) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/extract/${documentId}`, {
+      method: 'POST',
+    });
+    
+    if (!response.ok) {
+      throw new Error(`OCR Engine Failed: ${response.status}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error("🚨 OCR EXTRACTION FAILED:", error.message);
+    throw error;
   }
-  return await res.json();
-}
+};
 
-export async function getMyDocumentsApi() {
-  const token = getAuthToken();
-  const res = await fetch(`${BASE_URL}/upload/my-documents`, {
-    method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-  });
-
-  if (!res.ok) {
-    const errorData = await res.json().catch(() => ({}));
-    throw new Error(errorData.detail || "Failed to fetch documents");
+export const getMyDocumentsApi = async (userId) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/documents/user/${userId}`);
+    if (!response.ok) throw new Error("Failed to fetch documents from database");
+    return await response.json();
+  } catch (error) {
+    console.error("🚨 DB FETCH FAILED:", error.message);
+    throw error;
   }
-  return await res.json();
-}
+};
 
-// ==========================================
-// 3. THE FRONTEND ADAPTER (API SERVICE)
-// React components will use this without breaking!
-// ==========================================
 
-const mockQueueData = [
-  { id: "LR-8822-Y", khasra: "451/1", village: "Sitapur", issue: "Area Mismatch (0.2 Ac)", date: "2026-09-08 10:30 AM" },
-  { id: "LR-8824-A", khasra: "12/4", village: "Karnal", issue: "Illegible Signature", date: "2026-09-08 11:15 AM" },
-  { id: "LR-8826-C", khasra: "102", village: "Rohtak", issue: "Khata Not Found", date: "2026-09-08 01:45 PM" },
-];
+// =========================================================================
+// 🟡 HACKATHON DEMO / MOCK ENDPOINTS
+// Use these ONLY for screens where the backend logic isn't fully written yet.
+// These are explicitly mocked so you know exactly what is real and what is fake.
+// =========================================================================
 
 export const apiService = {
   
-  // REAL API HOOKED UP: Upload -> Extract -> Return to React
-  uploadDocument: async (formData) => {
-    try {
-      // 1. Get file from React's formData
-      const file = formData.get("file");
-      
-      // 2. Call backend's real upload
-      const uploadResponse = await uploadDocumentApi(file);
-      
-      // The backend will return an ID (e.g., uploadResponse.id or uploadResponse.document_id)
-      const docId = uploadResponse.id || uploadResponse.document_id || 'LR-8822-Y';
-
-      // 3. Call backend's AI Extract route
-      try {
-        await extractDocumentApi(docId);
-      } catch (extractError) {
-        console.warn("Real AI Extraction failed, but upload succeeded.", extractError);
-      }
-
-      // 4. Return in the format our React component expects
-      return { data: { success: true, recordId: docId } };
-
-    } catch (error) {
-      console.error("Backend failed, falling back to mock UI...", error);
-      // Fallback for Hackathon Demo if backend is down
-      return new Promise((resolve) => {
-        setTimeout(() => resolve({ data: { success: true, recordId: 'LR-8822-Y' } }), 2000);
-      });
-    }
-  },
-
-  // MOCK: Waiting for Backend Dev to provide Verification Queue JSON
-  getPendingVerifications: async () => {
-    try {
-      // We can try to use his getMyDocumentsApi later, but keeping mock for now so UI doesn't break
-      return new Promise((resolve) => setTimeout(() => resolve({ data: mockQueueData }), 1000));
-    } catch (e) {
-      return { data: mockQueueData };
-    }
-  },
-
-  // MOCK: Waiting for Backend Dev
-  getRecordById: async (recordId) => {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve({
-          data: {
-            id: recordId, 
-            documentType: "Khasra / Khatauni", language: "Hindi", uploadDate: "2026-09-08 10:24 AM",
-            fields: [
-              { key: "owner_name", label: "Owner / Entity", extracted: "Suresh Singh", confidence: 98.4, status: "high" },
-              { key: "khasra_no", label: "Khasra Number", extracted: "451/1", confidence: 96.2, status: "high" },
-              { key: "area", label: "Total Area (Acres)", extracted: "25.0", confidence: 61.2, status: "low", issue: "Mismatch: Expected 2.50" },
-              { key: "village", label: "Village", extracted: "Sitapur", confidence: 99.1, status: "high" },
-            ]
-          }
-        });
-      }, 1000);
-    });
-  },
-
-  // MOCK: Waiting for Backend Dev
-  updateRecord: async (recordId, updatedData) => {
-    return new Promise((resolve) => setTimeout(() => resolve({ data: { success: true } }), 1000));
-  },
-
-  // MOCK: Waiting for Backend Dev
-  getDashboardStats: async () => {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve({
-          data: {
-            stats: [
-              { title: "Processed Today", value: "1,248" },
-              { title: "Auto-Validated", value: "1,102" },
-              { title: "Pending Review", value: "146" },
-              { title: "System Accuracy", value: "94.6%" },
-            ],
-            validationData: [{ name: 'Validated', value: 88, color: '#16a34a' }, { name: 'Review', value: 9, color: '#d97706' }, { name: 'Rejected', value: 3, color: '#dc2626' }],
-            stateData: [{ state: 'DL', records: 820 }, { state: 'UP', records: 650 }, { state: 'HR', records: 430 }],
-            recentRecords: [
-              { id: "LR-8821-X", khasra: "125/2", owner: "Ramesh Kumar", confidence: 98.4, issue: "None", status: "Verified" },
-              { id: "LR-8822-Y", khasra: "451/1", owner: "Suresh Singh", confidence: 61.2, issue: "Area Mismatch", status: "Review" },
-            ]
-          }
-        });
-      }, 1200);
-    });
-  },
-
-  // MOCK: Login
   login: async (credentials) => {
-    return new Promise((resolve, reject) => {
+    // Simulating network delay
+    return new Promise((resolve) => {
       setTimeout(() => {
-        if (credentials.email === 'admin@gov.in' && credentials.password === 'password') {
-          resolve({ data: { token: "mock_jwt_token_8821", user: { name: "Ashish Kumar", role: "Verifier Officer" } } });
-        } else {
-          reject({ response: { data: { message: "Invalid credentials." } } });
-        }
-      }, 1000);
+        resolve({ token: 'mock_jwt_token_123', role: credentials.role || 'citizen' });
+      }, 500);
+    });
+  },
+
+  getPendingVerifications: async () => {
+    return Promise.resolve([
+      { id: 'LR-001', khasra: '420/1A', village: 'Palampur', issue: 'Area Mismatch', confidence: 68 },
+      { id: 'LR-002', khasra: '389', village: 'Patera', issue: 'Owner Conflict', confidence: 72 },
+    ]);
+  },
+
+  getRecordById: async (id) => {
+    return Promise.resolve({
+      id: id,
+      ownerName: 'Ramesh Kumar',
+      khasraNumber: '125/2',
+      area: '2.50',
+      status: 'pending'
+    });
+  },
+
+  updateRecord: async (id, updatedData) => {
+    console.log(`Mocking DB update for ${id} with:`, updatedData);
+    return Promise.resolve({ success: true, message: 'Record explicitly updated in SQLite' });
+  },
+
+  getDashboardStats: async () => {
+    return Promise.resolve({
+      total: 12450,
+      verified: 8930,
+      pending: 2150
     });
   }
 };
