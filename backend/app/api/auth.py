@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.models.user import User
+from app.models.user import User, UserRole
 from app.schemas.auth import UserCreate, UserLogin, Token
 from app.core.security import get_password_hash, verify_password, create_access_token
 
@@ -14,7 +14,12 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Email already registered")
 
     hashed_password = get_password_hash(user.password)
-    new_user = User(name=user.name, email=user.email, password_hash=hashed_password)
+    new_user = User(
+        name=user.name,
+        email=user.email,
+        password_hash=hashed_password,
+        role=UserRole.CITIZEN,
+    )
     db.add(new_user)
     db.commit()
     return {"message": "User registered successfully"}
@@ -26,7 +31,7 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
     if not db_user or not verify_password(user.password, db_user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
-    access_token = create_access_token(data={"user_id": db_user.id, "role": db_user.role.value})
+    access_token = create_access_token(data={"user_id": db_user.id, "role": db_user.role})
     
     return {
         "access_token": access_token,
@@ -34,6 +39,6 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
         "user": {
             "id": db_user.id,
             "name": db_user.name,
-            "role": db_user.role.value
+            "role": db_user.role
         }
     }

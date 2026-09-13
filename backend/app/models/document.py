@@ -1,24 +1,42 @@
-import enum
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Enum
+from datetime import datetime, timezone
+
+from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
-from datetime import datetime
+
 from app.database import Base
 
-# File ka status track karne ke liye
-class DocumentStatus(str, enum.Enum):
-    PENDING = "PENDING"       # Upload ho gayi, AI processing baaki hai
-    PROCESSED = "PROCESSED"   # AI ne data extract kar liya
-    FAILED = "FAILED"         # AI extraction fail ho gaya
+
+class DocumentStatus:
+    UPLOADED = "UPLOADED"
+    PROCESSING = "PROCESSING"
+    OCR_COMPLETED = "OCR_COMPLETED"
+    EXTRACTION_COMPLETED = "EXTRACTION_COMPLETED"
+    VALIDATED = "VALIDATED"
+    VERIFICATION_REQUIRED = "VERIFICATION_REQUIRED"
+    VERIFIED = "VERIFIED"
+    REJECTED = "REJECTED"
+    FAILED = "FAILED"
 
 class Document(Base):
     __tablename__ = "documents"
 
     id = Column(Integer, primary_key=True, index=True)
-    original_filename = Column(String, nullable=False)
-    saved_filename = Column(String, unique=True, nullable=False)
+    filename = Column(String, nullable=False)
     file_path = Column(String, nullable=False)
-    upload_date = Column(DateTime, default=datetime.utcnow)
-    status = Column(Enum(DocumentStatus), default=DocumentStatus.PENDING)
-    
-    # Kis user ne upload kiya uska relation (User Table se connect hoga)
-    owner_id = Column(Integer, ForeignKey("users.id"))
+    file_type = Column(String, nullable=False)
+    status = Column(String, default=DocumentStatus.UPLOADED, nullable=False)
+    ocr_text = Column(Text, nullable=True)
+    ocr_confidence = Column(Float, nullable=True)
+    uploaded_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at = Column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )
+
+    uploader = relationship("User", back_populates="documents")
+    land_record = relationship(
+        "LandRecord", back_populates="document", uselist=False, cascade="all, delete-orphan"
+    )
