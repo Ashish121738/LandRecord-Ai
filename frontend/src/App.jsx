@@ -1,23 +1,36 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-
-// Pages & Components
-import LandingPage from './pages/LandingPage';
-import Login from './pages/Login'; // <-- TUMHARA NAYA LOGIN IMPORT
 import Layout from './components/Layout';
-import Dashboard from './pages/Dashboard';
-import Upload from './pages/Upload';
-import Verification from './pages/Verification';
-import RecordDetails from './pages/RecordDetails';
+
+// 🌐 Public & Auth Pages
+import LandingPage from './pages/LandingPage';
+import Login from './pages/Login';
+
+// 🗺️ Shared Pages
 import MapPage from './pages/Map';
 
-// 🛑 SECURITY GUARD: Ye check karega ki user logged in hai ya nahi
-const ProtectedRoute = ({ children }) => {
-  const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
-  if (!token) {
-    // Agar token nahi mila, toh wapas login pe phek do
-    return <Navigate to="/login" replace />; 
-  }
+// 🏢 Admin Pages
+import AdminDashboard from './pages/admin/Dashboard';
+import AdminUsers from './pages/admin/Users';
+import AdminRecords from './pages/admin/Records';
+
+// 🛡️ Verifier Pages
+import VerifierDashboard from './pages/verifier/Dashboard';
+import VerificationQueue from './pages/verifier/Verification';
+import RecordDetails from './pages/verifier/RecordDetails';
+
+// 👨‍👩‍👦 Citizen Pages
+import CitizenDashboard from './pages/citizen/Dashboard';
+import Upload from './pages/citizen/Upload';
+
+const ProtectedRoute = ({ children, allowedRole }) => {
+  const token = localStorage.getItem('auth_token');
+  const userRole = localStorage.getItem('user_role');
+  
+  if (!token) return <Navigate to="/login" replace />;
+  // Agar galat role wala kisi aur ke page pe jane ki koshish kare:
+  if (allowedRole && userRole !== allowedRole) return <Navigate to={`/${userRole}/dashboard`} replace />;
+  
   return children;
 };
 
@@ -25,26 +38,37 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Public Routes */}
+        {/* PUBLIC ROUTES */}
         <Route path="/" element={<LandingPage />} />
-        <Route path="/login" element={<Login />} /> {/* <-- NAYA LOGIN ROUTE */}
+        <Route path="/login" element={<Login />} />
         
-        {/* Protected Dashboard Routes (Ab bina login ke nahi khulenge) */}
-        <Route 
-          path="/dashboard" 
-          element={
-            <ProtectedRoute>
-              <Layout />
-            </ProtectedRoute>
-          }
-        >
-          {/* Sub-pages */}
-          <Route index element={<Dashboard />} />
-          <Route path="upload" element={<Upload />} />
-          <Route path="verification" element={<Verification />} />
-          <Route path="map" element={<MapPage />} />
-          <Route path="record/:id" element={<RecordDetails />} />
+        {/* Catch-all for old broken links */}
+        <Route path="/dashboard/*" element={<Navigate to="/login" replace />} />
+
+        {/* ADMIN ROUTES */}
+        <Route path="/admin" element={<ProtectedRoute allowedRole="admin"><Layout /></ProtectedRoute>}>
+          <Route path="dashboard" element={<AdminDashboard />} />
+          <Route path="users" element={<AdminUsers />} />
+          <Route path="records" element={<AdminRecords />} />
+          <Route path="gis" element={<MapPage />} />
         </Route>
+
+        {/* VERIFIER ROUTES */}
+        <Route path="/verifier" element={<ProtectedRoute allowedRole="verifier"><Layout /></ProtectedRoute>}>
+          <Route path="dashboard" element={<VerifierDashboard />} />
+          <Route path="queue" element={<VerificationQueue />} />
+          <Route path="record/:id" element={<RecordDetails />} />
+          <Route path="gis" element={<MapPage />} />
+        </Route>
+
+        {/* CITIZEN ROUTES */}
+        <Route path="/citizen" element={<ProtectedRoute allowedRole="citizen"><Layout /></ProtectedRoute>}>
+          <Route path="dashboard" element={<CitizenDashboard />} />
+          <Route path="upload" element={<Upload />} />
+        </Route>
+        
+        {/* 404 Redirect - Agar koi ulta-seedha URL daale toh Landing Page par bhej do */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   );
