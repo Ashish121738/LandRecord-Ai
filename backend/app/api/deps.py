@@ -3,7 +3,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import jwt, JWTError
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.models.user import User
+from app.models.user import User, UserRole
 from app.core.security import SECRET_KEY, ALGORITHM
 
 # Yeh Swagger UI mein "Authorize" ka lock 🔒 icon laayega
@@ -26,3 +26,17 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
         raise HTTPException(status_code=401, detail="User not found")
     
     return user
+
+
+def require_roles(*allowed_roles):
+    def role_dependency(current_user: User = Depends(get_current_user)):
+        if current_user.role not in allowed_roles:
+            raise HTTPException(status_code=403, detail="Insufficient permissions")
+        return current_user
+
+    return role_dependency
+
+
+require_citizen = require_roles(UserRole.CITIZEN)
+require_verifier = require_roles(UserRole.VERIFIER, UserRole.ADMIN)
+require_admin = require_roles(UserRole.ADMIN)

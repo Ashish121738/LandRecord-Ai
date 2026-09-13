@@ -1,0 +1,4 @@
+document_id,owner_name_hindi,owner_name_english,khasra_number,total_area_hectares,land_type,district,village,ai_confidence_score,status
+synthetic-001,रमेश नारायण झा,Ramesh Narayan Jha,420/1A,2.5 Hectare,Agricultural,Pune,Palampur,0.95,VALIDATED
+synthetic-002,सीमा देवी,Seema Devi,77/3,1.25 Hectare,Agricultural,Meerut,Rampur,0.92,VALIDATED
+synthetic-003,अजय सिंह,Ajay Singh,18/9,0.80 Hectare,Residential,Lucknow,Naya Gaon,0.91,VERIFICATION_REQUIRED
